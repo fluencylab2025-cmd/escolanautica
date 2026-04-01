@@ -6,6 +6,10 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+
+    env:
+      GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
