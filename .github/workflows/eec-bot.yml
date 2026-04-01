@@ -1,8 +1,6 @@
-name: eec-bot
+name: Run Bot
 
 on:
-  schedule:
-    - cron: '0 * * * *'  # roda a cada 1 hora
   workflow_dispatch:
 
 jobs:
@@ -10,12 +8,20 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+      GOOGLE_CREDS: ${{ secrets.GOOGLE_CREDS }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Clonar repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - run: pip install -r requirements.txt
-      - run: python main.py
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Rodar script
+        run: python main.py
