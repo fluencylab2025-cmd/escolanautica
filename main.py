@@ -9,7 +9,10 @@ creds_json = os.environ.get("GOOGLE_CREDENTIALS")
 creds_dict = json.loads(creds_json)
 
 # Autenticação
-scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+scopes = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
 credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
 client = gspread.authorize(credentials)
 
