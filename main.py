@@ -1,98 +1,62 @@
 import requests
-import os
-import gspread
-from google.oauth2.service_account import Credentials
-import json
+from bs4 import BeautifulSoup
 import time
-from datetime import datetime
+import re
 
-# =====================
-# GOOGLE SHEETS
-# =====================
+def buscar_google(query, paginas=3):
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
 
-creds_json = os.getenv("GOOGLE_CREDS")
-creds_dict = json.loads(creds_json)
+    resultados = []
 
-scopes = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive"
-]
+    for page in range(paginas):
+        start = page * 10
+        url = f"https://www.google.com/search?q={query.replace(' ', '+')}&start={start}"
 
-creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-client = gspread.authorize(creds)
+        print(f"🔎 Buscando página {page + 1}...")
 
-sheet = client.open("EEC Leads").sheet1
+        res = requests.get(url, headers=headers)
+        soup = BeautifulSoup(res.text, "html.parser")
 
-# =====================
-# GOOGLE API
-# =====================
+        for g in soup.select(".tF2Cxc"):
+            title = g.select_one("h3")
+            link = g.select_one("a")
 
-API_KEY = os.getenv("GOOGLE_API_KEY")
+            if title and link:
+                resultados.append({
+                    "titulo": title.text,
+                    "link": link["href"]
+                })
 
-# 🔎 VÁRIAS BUSCAS
-queries = [
-    "curso arrais amador Brasil",
-    "escola náutica Brasil",
-    "despachante náutico Brasil",
-    "regularização embarcação Brasil"
-]
+        time.sleep(2)
 
-# =====================
-# FUNÇÃO UF
-# =====================
+    return resultados
 
-def extrair_uf(endereco):
-    estados = [
-        "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA",
-        "MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN",
-        "RS","RO","RR","SC","SP","SE","TO"
-    ]
-    for uf in estados:
-        if f"- {uf}" in endereco:
-            return uf
-    return "N/A"
 
-# =====================
-# LOOP PRINCIPAL
-# =====================
+def extrair_contatos(url):
+    try:
+        res = requests.get(url, timeout=5)
+        texto = res.text
 
-for query in queries:
-    print(f"🔎 Buscando: {query}")
+        emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+", texto)
+        telefones = re.findall(r"\(?\d{2}\)?\s?\d{4,5}-?\d{4}", texto)
 
-    search_url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?query={query}&key={API_KEY}"
-    response = requests.get(search_url)
-    data = response.json()
-    print("RESULTADOS:", data)
+        return list(set(emails)), list(set(telefones))
 
-    for place in data.get("results", []):
-        nome = place.get("name")
-        endereco = place.get("formatted_address")
-        rating = place.get("rating", "N/A")
-        place_id = place.get("place_id")
+    except:
+        return [], []
 
-        uf = extrair_uf(endereco)
 
-        # detalhes
-        details_url = f"https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&fields=formatted_phone_number,website&key={API_KEY}"
-        
-        details_response = requests.get(details_url)
-        details = details_response.json().get("result", {})
+# EXECUÇÃO
+dados = buscar_google("escola nautica brasil", paginas=3)
 
-        telefone = details.get("formatted_phone_number", "N/A")
-        site = details.get("website", "N/A")
+for d in dados:
+    print("Empresa:", d["titulo"])
+    print("Site:", d["link"])
 
-        data_hoje = datetime.now().strftime("%Y-%m-%d")
+    emails, telefones = extrair_contatos(d["link"])
 
-        sheet.append_row([
-            uf,
-            nome,
-            endereco,
-            rating,
-            telefone,
-            site,
-            data_hoje
-        ])
-
-        time.sleep(1)
-
-print("✅ Leads completos enviados!")
+    print("Emails:", emails)
+    print("Telefones:", telefones)
+    print("==========")
