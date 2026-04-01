@@ -1,6 +1,8 @@
 name: eec-bot
 
 on:
+  schedule:
+    - cron: '0 * * * *'  # roda a cada 1 hora
   workflow_dispatch:
 
 jobs:
