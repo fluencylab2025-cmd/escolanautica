@@ -61,6 +61,7 @@ for query in queries:
 
     search_url = f"https://maps.googleapis.com/maps/api/place/textsearch/json?query={query}&key={API_KEY}"
     response = requests.get(search_url)
+    data = response.json()
     print("RESULTADOS:", data)
 
     for place in data.get("results", []):
